@@ -1,0 +1,7 @@
+{
+  "name": "Road Ranger",
+  "description": "A community-driven road status and navigation app for drivers. Share real-time updates on hazards, road blocks, and new routes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

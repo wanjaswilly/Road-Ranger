@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - vehicleType: string (optional)
+    //   - vehicleParticulars: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: reports
+    // Document ID: {reportId}
+    // Fields:
+    //   - id: string (required)
+    //   - type: string (required, enum: Hazard, RoadBlock, TollStation, Shortcut, NewRoute, DrivingCondition, Levy, Collection, Requirement)
+    //   - subtype: string (optional)
+    //   - location: map { lat: number, lng: number } (required)
+    //   - description: string (optional)
+    //   - authorUid: string (required)
+    //   - authorName: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: routes
+    // Document ID: {routeId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (optional)
+    //   - from: string (required)
+    //   - to: string (required)
+    //   - path: list [ { lat: number, lng: number } ] (required)
+    //   - isShortcut: bool (optional)
+    //   - verified: bool (optional)
+    //   - authorUid: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.authorUid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidLocation(loc) {
+      return loc is map && loc.lat is number && loc.lng is number;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidReport(data) {
+      return data.type in ["Hazard", "RoadBlock", "TollStation", "Shortcut", "NewRoute", "DrivingCondition", "Levy", "Collection", "Requirement"] &&
+             isValidLocation(data.location) &&
+             data.authorUid == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidRoute(data) {
+      return data.from is string &&
+             data.to is string &&
+             data.path is list &&
+             data.authorUid == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data);
+      allow update: if isDocOwner() && isValidReport(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /routes/{routeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidRoute(request.resource.data);
+      allow update: if isDocOwner() && isValidRoute(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

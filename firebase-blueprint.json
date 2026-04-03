@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A driver using the Road Ranger app.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "vehicleType": { "type": "string" },
+        "vehicleParticulars": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A road status update or hazard report.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["Hazard", "RoadBlock", "TollStation", "Shortcut", "NewRoute", "DrivingCondition", "Levy", "Collection", "Requirement"] },
+        "subtype": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "description": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "location", "authorUid", "createdAt"]
+    },
+    "Route": {
+      "title": "Route",
+      "description": "A navigation route or shortcut.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          }
+        },
+        "isShortcut": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "authorUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["from", "to", "path", "authorUid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and vehicle information."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Real-time road status reports."
+    },
+    "/routes/{routeId}": {
+      "schema": "Route",
+      "description": "Community-contributed routes and shortcuts."
+    }
+  }
+}
